@@ -1,3 +1,5 @@
+use core::f32;
+
 use crate::geometry;
 use iced::{Point, Rectangle};
 
@@ -29,8 +31,14 @@ pub struct KDTree {
     nodes: Vec<Node>,
 }
 
-#[allow(dead_code)]
+fn norm2_squared(point_a: &Point, point_b: &Point) -> f32 {
+    let dx = point_a.x - point_b.x;
+    let dy = point_a.y - point_b.y;
+    dx * dx + dy * dy
+}
+
 impl KDTree {
+    #[allow(dead_code)]
     pub fn new(points: &[Point]) -> Self {
         let mut tree = KDTree::default();
         if let Some((root_point, points)) = points.split_first() {
@@ -143,13 +151,64 @@ impl KDTree {
         }
     }
 
-    fn dfs_lines(
+    pub fn nearest_neighbor(&self, point: &Point) -> Option<Point> {
+        if self.nodes.is_empty() {
+            None
+        } else {
+            Some(self.recursive_nearest_neighbor(
+                &point,
+                0,
+                Point::new(f32::INFINITY, f32::INFINITY),
+            ))
+        }
+    }
+
+    fn recursive_nearest_neighbor(
         &self,
+        point: &Point,
         node_idx: usize,
-        lines: &mut Vec<geometry::Line>,
-        rotation: i32,
-        bounds: Rectangle,
-    ) {
+        best_point: Point,
+    ) -> Point {
+        let (best_point, node_index) = self.single_neighbor_search(point, node_idx, best_point);
+        match node_index {
+            Some(index) => self.recursive_nearest_neighbor(point, index, best_point),
+            None => best_point,
+        }
+    }
+
+    fn single_neighbor_search(
+        &self,
+        point: &Point,
+        node_idx: usize,
+        best_point: Point,
+    ) -> (Point, Option<usize>) {
+        let node = &self.nodes[node_idx];
+        let current_dist = norm2_squared(&best_point, &point);
+        let node_dist = norm2_squared(&node.point, &point);
+        let best_point = if node_dist < current_dist {
+            &node.point
+        } else {
+            &best_point
+        };
+        match node.split {
+            Split::X => {
+                if point.x <= node.point.x {
+                    (*best_point, node.left)
+                } else {
+                    (*best_point, node.right)
+                }
+            }
+            Split::Y => {
+                if point.y <= node.point.y {
+                    (*best_point, node.left)
+                } else {
+                    (*best_point, node.right)
+                }
+            }
+        }
+    }
+
+    fn dfs_lines(&self, node_idx: usize, lines: &mut Vec<geometry::Line>, bounds: Rectangle) {
         let node = &self.nodes[node_idx];
         if let Some(index) = node.left {
             let left = &self.nodes[index];
@@ -163,7 +222,7 @@ impl KDTree {
                         height: node.point.y,
                         ..bounds
                     };
-                    self.dfs_lines(index, lines, rotation + 1, bounds);
+                    self.dfs_lines(index, lines, bounds);
                 }
                 Split::Y => {
                     lines.push(geometry::Line::PointToPoint(
@@ -174,7 +233,7 @@ impl KDTree {
                         width: node.point.x,
                         ..bounds
                     };
-                    self.dfs_lines(index, lines, rotation + 1, bounds);
+                    self.dfs_lines(index, lines, bounds);
                 }
             }
         }
@@ -190,7 +249,7 @@ impl KDTree {
                         y: node.point.y,
                         ..bounds
                     };
-                    self.dfs_lines(index, lines, rotation - 1, bounds);
+                    self.dfs_lines(index, lines, bounds);
                 }
                 Split::Y => {
                     lines.push(geometry::Line::PointToPoint(
@@ -201,7 +260,7 @@ impl KDTree {
                         x: node.point.x,
                         ..bounds
                     };
-                    self.dfs_lines(index, lines, rotation - 1, bounds);
+                    self.dfs_lines(index, lines, bounds);
                 }
             }
         }
@@ -214,7 +273,6 @@ impl KDTree {
             self.dfs_lines(
                 0,
                 &mut lines,
-                0,
                 Rectangle {
                     x: 0.,
                     y: 0.,

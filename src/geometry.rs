@@ -1,5 +1,5 @@
 use crate::Message;
-use iced::{Point, Rectangle, Renderer, Theme, mouse, widget::canvas};
+use iced::{Color, Point, Rectangle, Renderer, Theme, mouse, widget::canvas};
 
 pub static LINE_STROKE_WIDTH: f32 = 2.;
 pub static CIRCLE_RADIUS: f32 = 5.;
@@ -23,13 +23,25 @@ pub enum Line {
 }
 
 pub struct Geometry {
+    target: Option<Point>,
+    neighbor: Option<Point>,
     points: Vec<Point>,
     lines: Vec<Line>,
 }
 
 impl Geometry {
-    pub fn new(points: Vec<Point>, lines: Vec<Line>) -> Self {
-        Self { points, lines }
+    pub fn new(
+        points: Vec<Point>,
+        lines: Vec<Line>,
+        target: Option<Point>,
+        neighbor: Option<Point>,
+    ) -> Self {
+        Self {
+            points,
+            lines,
+            target,
+            neighbor,
+        }
     }
 }
 
@@ -111,6 +123,18 @@ impl canvas::Program<Message> for Geometry {
 
             frame.fill(&circle, theme.palette().primary);
         }
+
+        if let Some(point) = self.target {
+            let circle = canvas::Path::circle(scale(&point, &bounds), CIRCLE_RADIUS);
+
+            frame.fill(&circle, Color::new(0.0, 1.0, 0.0, 1.0));
+        }
+
+        if let Some(point) = self.neighbor {
+            let circle = canvas::Path::circle(scale(&point, &bounds), CIRCLE_RADIUS);
+
+            frame.fill(&circle, Color::new(1.0, 0.0, 0.0, 1.0));
+        }
         vec![frame.into_geometry()]
     }
 
@@ -122,11 +146,20 @@ impl canvas::Program<Message> for Geometry {
         cursor: mouse::Cursor,
     ) -> (canvas::event::Status, Option<Message>) {
         if let Some(position) = cursor.position() {
-            if canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) == event {
-                return (
-                    canvas::event::Status::Captured,
-                    Some(Message::AddPoint(invert(&position, &bounds))),
-                );
+            match event {
+                canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                    return (
+                        canvas::event::Status::Captured,
+                        Some(Message::AddPoint(invert(&position, &bounds))),
+                    );
+                }
+                canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
+                    return (
+                        canvas::event::Status::Captured,
+                        Some(Message::FindNeighbor(invert(&position, &bounds))),
+                    );
+                }
+                _ => (),
             }
         }
         (canvas::event::Status::Ignored, None)

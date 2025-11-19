@@ -5,20 +5,16 @@ mod kdtree;
 
 struct App {
     tree: kdtree::KDTree,
+    closest_neighbor: Option<Point>,
+    target: Option<Point>,
 }
 
 impl Default for App {
     fn default() -> Self {
-        // let points = vec![
-        //     Point::new(0.5, 0.6),
-        //     Point::new(0.1, 0.3),
-        //     Point::new(0.2, 0.15),
-        //     Point::new(0.4, 0.45),
-        //     Point::new(0.8, 0.8),
-        //     Point::new(0.6, 0.18),
-        // ];
         Self {
             tree: kdtree::KDTree::default(),
+            closest_neighbor: None,
+            target: None,
         }
     }
 }
@@ -26,18 +22,33 @@ impl Default for App {
 #[derive(Debug)]
 enum Message {
     AddPoint(Point),
+    FindNeighbor(Point),
 }
 
 impl App {
     fn update(&mut self, message: Message) {
-        let Message::AddPoint(point) = message;
-        self.tree.add_point(point);
+        println!();
+        match message {
+            Message::AddPoint(point) => {
+                match self.target {
+                    Some(point) => self.closest_neighbor = self.tree.nearest_neighbor(&point),
+                    None => self.closest_neighbor = None,
+                }
+                self.tree.add_point(point);
+            }
+            Message::FindNeighbor(point) => {
+                self.closest_neighbor = self.tree.nearest_neighbor(&point);
+                self.target = Some(point);
+            }
+        }
     }
 
     fn view(&self) -> Element<'_, Message> {
         canvas::Canvas::new(geometry::Geometry::new(
             self.tree.points(),
             self.tree.lines(),
+            self.target,
+            self.closest_neighbor,
         ))
         .width(Length::Fill)
         .height(Length::Fill)
