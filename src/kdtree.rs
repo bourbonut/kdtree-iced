@@ -26,15 +26,25 @@ struct Node {
     split: Split,
 }
 
+impl Node {
+    fn is_in_hypersphere(&self, point: &Point, radius: f32) -> bool {
+        match self.split {
+            Split::X => radius > (point.x - self.point.x).abs(),
+            Split::Y => radius > (point.y - self.point.y).abs(),
+        }
+    }
+
+    fn direction(&self, point: &Point) -> bool {
+        match self.split {
+            Split::X => point.x <= self.point.x,
+            Split::Y => point.y <= self.point.y,
+        }
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct KDTree {
     nodes: Vec<Node>,
-}
-
-fn norm2_squared(point_a: &Point, point_b: &Point) -> f32 {
-    let dx = point_a.x - point_b.x;
-    let dy = point_a.y - point_b.y;
-    dx * dx + dy * dy
 }
 
 impl KDTree {
@@ -86,7 +96,7 @@ impl KDTree {
     pub fn add_point(&mut self, point: Point) {
         if self.nodes.is_empty() {
             self.nodes.push(Node {
-                point: point,
+                point,
                 left: None,
                 right: None,
                 split: Split::X,
@@ -116,7 +126,7 @@ impl KDTree {
 
             let node = &self.nodes[node_index];
             self.nodes.push(Node {
-                point: point,
+                point,
                 left: None,
                 right: None,
                 split: node.split.opposite(),
@@ -155,61 +165,47 @@ impl KDTree {
         if self.nodes.is_empty() {
             None
         } else {
-            Some(self.recursive_nearest_neighbor(
-                &point,
-                0,
-                Point::new(f32::INFINITY, f32::INFINITY),
-            ))
+            Some(self.nearest_neighbor_search(point, 0))
         }
     }
 
-    fn recursive_nearest_neighbor(
-        &self,
-        point: &Point,
-        node_idx: usize,
-        best_point: Point,
-    ) -> Point {
-        let (best_point, node_index) = self.single_neighbor_search(point, node_idx, best_point);
-        match node_index {
-            Some(index) => self.recursive_nearest_neighbor(point, index, best_point),
-            None => best_point,
-        }
-    }
-
-    fn single_neighbor_search(
-        &self,
-        point: &Point,
-        node_idx: usize,
-        best_point: Point,
-    ) -> (Point, Option<usize>) {
-        let node = &self.nodes[node_idx];
-        let current_dist = norm2_squared(&best_point, &point);
-        let node_dist = norm2_squared(&node.point, &point);
-        let best_point = if node_dist < current_dist {
-            &node.point
+    fn nearest_neighbor_search(&self, point: &Point, node_index: usize) -> Point {
+        let node = &self.nodes[node_index];
+        let (primary, secondary) = if node.direction(point) {
+            (node.left, node.right)
         } else {
-            &best_point
+            (node.right, node.left)
         };
-        match node.split {
-            Split::X => {
-                if point.x <= node.point.x {
-                    (*best_point, node.left)
-                } else {
-                    (*best_point, node.right)
-                }
+
+        let (mut best_point, mut best_distance) = match primary {
+            Some(idx) => {
+                let p = self.nearest_neighbor_search(point, idx);
+                (p, point.distance(p))
             }
-            Split::Y => {
-                if point.y <= node.point.y {
-                    (*best_point, node.left)
-                } else {
-                    (*best_point, node.right)
-                }
+            None => (node.point, point.distance(node.point)),
+        };
+
+        if let Some(secondary_index) = secondary
+            && node.is_in_hypersphere(point, best_distance)
+        {
+            let secondary_best = self.nearest_neighbor_search(point, secondary_index);
+            let dist = point.distance(secondary_best);
+            if dist < best_distance {
+                best_point = secondary_best;
+                best_distance = dist;
             }
+        }
+
+        let node_distance = point.distance(node.point);
+        if node_distance < best_distance {
+            node.point
+        } else {
+            best_point
         }
     }
 
-    fn dfs_lines(&self, node_idx: usize, lines: &mut Vec<geometry::Line>, bounds: Rectangle) {
-        let node = &self.nodes[node_idx];
+    fn dfs_lines(&self, node_index: usize, lines: &mut Vec<geometry::Line>, bounds: Rectangle) {
+        let node = &self.nodes[node_index];
         if let Some(index) = node.left {
             let left = &self.nodes[index];
             match left.split {
