@@ -1,4 +1,4 @@
-use crate::lines;
+use crate::geometry;
 use iced::{Point, Rectangle};
 
 #[derive(Debug)]
@@ -29,6 +29,7 @@ pub struct KDTree {
     nodes: Vec<Node>,
 }
 
+#[allow(dead_code)]
 impl KDTree {
     pub fn new(points: &[Point]) -> Self {
         let mut tree = KDTree::default();
@@ -74,6 +75,47 @@ impl KDTree {
         tree
     }
 
+    pub fn add_point(&mut self, point: Point) {
+        if self.nodes.is_empty() {
+            self.nodes.push(Node {
+                point: point,
+                left: None,
+                right: None,
+                split: Split::X,
+            });
+        } else {
+            let node_index = self.find_node(&point, 0);
+            let next_index = self.nodes.len();
+
+            let node = &mut self.nodes[node_index];
+
+            match node.split {
+                Split::X => {
+                    if point.x <= node.point.x {
+                        node.left = Some(next_index)
+                    } else {
+                        node.right = Some(next_index)
+                    }
+                }
+                Split::Y => {
+                    if point.y <= node.point.y {
+                        node.left = Some(next_index)
+                    } else {
+                        node.right = Some(next_index)
+                    }
+                }
+            };
+
+            let node = &self.nodes[node_index];
+            self.nodes.push(Node {
+                point: point,
+                left: None,
+                right: None,
+                split: node.split.opposite(),
+            });
+        }
+    }
+
     fn find_node(&self, point: &Point, node_index: usize) -> usize {
         match self.single_search(point, node_index) {
             Some(index) => self.find_node(point, index),
@@ -104,52 +146,30 @@ impl KDTree {
     fn dfs_lines(
         &self,
         node_idx: usize,
-        lines: &mut Vec<lines::Line>,
+        lines: &mut Vec<geometry::Line>,
         rotation: i32,
         bounds: Rectangle,
     ) {
         let node = &self.nodes[node_idx];
         if let Some(index) = node.left {
-            dbg!(
-                "left",
-                index,
-                rotation.abs() >= 2,
-                rotation,
-                node.point,
-                bounds,
-            );
             let left = &self.nodes[index];
             match left.split {
                 Split::X => {
-                    lines.push(if rotation.abs() >= 2 {
-                        lines::Line::PointToPoint(
-                            Point::new(left.point.x, node.point.y),
-                            Point::new(left.point.x, bounds.y),
-                        )
-                    } else {
-                        lines::Line::PointDirection(
-                            Point::new(left.point.x, node.point.y),
-                            lines::Direction::Top,
-                        )
-                    });
+                    lines.push(geometry::Line::PointToPoint(
+                        Point::new(left.point.x, node.point.y),
+                        Point::new(left.point.x, bounds.y),
+                    ));
                     let bounds = Rectangle {
-                        y: node.point.y,
+                        height: node.point.y,
                         ..bounds
                     };
                     self.dfs_lines(index, lines, rotation + 1, bounds);
                 }
                 Split::Y => {
-                    lines.push(if rotation.abs() >= 2 {
-                        lines::Line::PointToPoint(
-                            Point::new(node.point.x, left.point.y),
-                            Point::new(bounds.x, left.point.y),
-                        )
-                    } else {
-                        lines::Line::PointDirection(
-                            Point::new(node.point.x, left.point.y),
-                            lines::Direction::Left,
-                        )
-                    });
+                    lines.push(geometry::Line::PointToPoint(
+                        Point::new(node.point.x, left.point.y),
+                        Point::new(bounds.x, left.point.y),
+                    ));
                     let bounds = Rectangle {
                         width: node.point.x,
                         ..bounds
@@ -159,50 +179,24 @@ impl KDTree {
             }
         }
         if let Some(index) = node.right {
-            dbg!(
-                "right",
-                index,
-                rotation.abs() >= 2,
-                rotation,
-                node.point,
-                bounds
-            );
             let right = &self.nodes[index];
             match right.split {
                 Split::X => {
-                    lines.push(if rotation.abs() >= 2 {
-                        lines::Line::PointToPoint(
-                            Point::new(right.point.x, node.point.y),
-                            Point::new(right.point.x, bounds.height),
-                        )
-                    } else {
-                        lines::Line::PointDirection(
-                            Point::new(right.point.x, node.point.y),
-                            lines::Direction::Bottom,
-                        )
-                    });
+                    lines.push(geometry::Line::PointToPoint(
+                        Point::new(right.point.x, node.point.y),
+                        Point::new(right.point.x, bounds.height),
+                    ));
                     let bounds = Rectangle {
                         y: node.point.y,
-                        ..bounds
-                    };
-                    let bounds = Rectangle {
-                        height: node.point.y,
                         ..bounds
                     };
                     self.dfs_lines(index, lines, rotation - 1, bounds);
                 }
                 Split::Y => {
-                    lines.push(if rotation.abs() >= 2 {
-                        lines::Line::PointToPoint(
-                            Point::new(node.point.x, right.point.y),
-                            Point::new(bounds.width, right.point.y),
-                        )
-                    } else {
-                        lines::Line::PointDirection(
-                            Point::new(node.point.x, right.point.y),
-                            lines::Direction::Right,
-                        )
-                    });
+                    lines.push(geometry::Line::PointToPoint(
+                        Point::new(node.point.x, right.point.y),
+                        Point::new(bounds.width, right.point.y),
+                    ));
                     let bounds = Rectangle {
                         x: node.point.x,
                         ..bounds
@@ -213,10 +207,10 @@ impl KDTree {
         }
     }
 
-    pub fn lines(&self) -> Vec<lines::Line> {
+    pub fn lines(&self) -> Vec<geometry::Line> {
         if let Some(root) = self.nodes.first() {
             let mut lines = Vec::new();
-            lines.push(lines::Line::Vertical(root.point.x));
+            lines.push(geometry::Line::Vertical(root.point.x));
             self.dfs_lines(
                 0,
                 &mut lines,
@@ -232,5 +226,9 @@ impl KDTree {
         } else {
             Vec::new()
         }
+    }
+
+    pub fn points(&self) -> Vec<Point> {
+        self.nodes.iter().map(|node| node.point).collect()
     }
 }

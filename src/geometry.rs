@@ -2,7 +2,10 @@ use crate::Message;
 use iced::{Point, Rectangle, Renderer, Theme, mouse, widget::canvas};
 
 pub static LINE_STROKE_WIDTH: f32 = 2.;
+pub static CIRCLE_RADIUS: f32 = 5.;
 
+#[allow(dead_code)]
+#[derive(Debug)]
 pub(crate) enum Direction {
     Top,
     Bottom,
@@ -11,6 +14,7 @@ pub(crate) enum Direction {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub enum Line {
     Vertical(f32),
     Horizontal(f32),
@@ -18,13 +22,14 @@ pub enum Line {
     PointToPoint(Point, Point),
 }
 
-pub struct Lines<'a> {
-    lines: &'a Vec<Line>,
+pub struct Geometry {
+    points: Vec<Point>,
+    lines: Vec<Line>,
 }
 
-impl<'a> Lines<'a> {
-    pub fn new(lines: &'a Vec<Line>) -> Self {
-        Self { lines }
+impl Geometry {
+    pub fn new(points: Vec<Point>, lines: Vec<Line>) -> Self {
+        Self { points, lines }
     }
 }
 
@@ -39,7 +44,15 @@ fn scale(point: &Point, bounds: &Rectangle) -> Point {
     )
 }
 
-impl<'a> canvas::Program<Message> for Lines<'a> {
+#[inline]
+fn invert(point: &Point, bounds: &Rectangle) -> Point {
+    Point::new(
+        (point.x - bounds.x) / bounds.width,
+        (point.y - bounds.y) / bounds.height,
+    )
+}
+
+impl canvas::Program<Message> for Geometry {
     type State = State;
 
     fn draw(
@@ -92,6 +105,30 @@ impl<'a> canvas::Program<Message> for Lines<'a> {
                     .with_color(theme.palette().primary),
             );
         }
+
+        for point in self.points.iter() {
+            let circle = canvas::Path::circle(scale(point, &bounds), CIRCLE_RADIUS);
+
+            frame.fill(&circle, theme.palette().primary);
+        }
         vec![frame.into_geometry()]
+    }
+
+    fn update(
+        &self,
+        _state: &mut Self::State,
+        event: canvas::Event,
+        bounds: Rectangle,
+        cursor: mouse::Cursor,
+    ) -> (canvas::event::Status, Option<Message>) {
+        if let Some(position) = cursor.position() {
+            if canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) == event {
+                return (
+                    canvas::event::Status::Captured,
+                    Some(Message::AddPoint(invert(&position, &bounds))),
+                );
+            }
+        }
+        (canvas::event::Status::Ignored, None)
     }
 }
