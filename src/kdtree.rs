@@ -1,5 +1,5 @@
 use crate::lines;
-use iced::Point;
+use iced::{Point, Rectangle};
 
 #[derive(Debug)]
 enum Split {
@@ -106,73 +106,108 @@ impl KDTree {
         node_idx: usize,
         lines: &mut Vec<lines::Line>,
         rotation: i32,
-        last_x: &f32,
-        last_y: &f32,
+        bounds: Rectangle,
     ) {
         let node = &self.nodes[node_idx];
         if let Some(index) = node.left {
+            dbg!(
+                "left",
+                index,
+                rotation.abs() >= 2,
+                rotation,
+                node.point,
+                bounds,
+            );
             let left = &self.nodes[index];
             match left.split {
                 Split::X => {
-                    lines.push(if rotation.abs() > 3 {
+                    lines.push(if rotation.abs() >= 2 {
                         lines::Line::PointToPoint(
-                            Point::new(left.point.x, *last_y),
-                            Point::new(*last_x, *last_y),
+                            Point::new(left.point.x, node.point.y),
+                            Point::new(left.point.x, bounds.y),
                         )
                     } else {
                         lines::Line::PointDirection(
-                            Point::new(left.point.x, *last_y),
+                            Point::new(left.point.x, node.point.y),
                             lines::Direction::Top,
                         )
                     });
-                    self.dfs_lines(index, lines, rotation + 1, &left.point.x, last_y);
+                    let bounds = Rectangle {
+                        y: node.point.y,
+                        ..bounds
+                    };
+                    self.dfs_lines(index, lines, rotation + 1, bounds);
                 }
                 Split::Y => {
-                    lines.push(if rotation.abs() > 3 {
+                    lines.push(if rotation.abs() >= 2 {
                         lines::Line::PointToPoint(
-                            Point::new(*last_x, left.point.y),
-                            Point::new(*last_x, *last_y),
+                            Point::new(node.point.x, left.point.y),
+                            Point::new(bounds.x, left.point.y),
                         )
                     } else {
                         lines::Line::PointDirection(
-                            Point::new(*last_x, left.point.y),
+                            Point::new(node.point.x, left.point.y),
                             lines::Direction::Left,
                         )
                     });
-                    self.dfs_lines(index, lines, rotation + 1, last_x, &left.point.y);
+                    let bounds = Rectangle {
+                        width: node.point.x,
+                        ..bounds
+                    };
+                    self.dfs_lines(index, lines, rotation + 1, bounds);
                 }
             }
         }
         if let Some(index) = node.right {
+            dbg!(
+                "right",
+                index,
+                rotation.abs() >= 2,
+                rotation,
+                node.point,
+                bounds
+            );
             let right = &self.nodes[index];
             match right.split {
                 Split::X => {
-                    lines.push(if rotation.abs() > 3 {
+                    lines.push(if rotation.abs() >= 2 {
                         lines::Line::PointToPoint(
-                            Point::new(right.point.x, *last_y),
-                            Point::new(*last_x, *last_y),
+                            Point::new(right.point.x, node.point.y),
+                            Point::new(right.point.x, bounds.height),
                         )
                     } else {
                         lines::Line::PointDirection(
-                            Point::new(right.point.x, *last_y),
+                            Point::new(right.point.x, node.point.y),
                             lines::Direction::Bottom,
                         )
                     });
-                    self.dfs_lines(index, lines, rotation - 1, &right.point.x, last_y);
+                    let bounds = Rectangle {
+                        y: node.point.y,
+                        ..bounds
+                    };
+                    let bounds = Rectangle {
+                        height: node.point.y,
+                        ..bounds
+                    };
+                    self.dfs_lines(index, lines, rotation - 1, bounds);
                 }
                 Split::Y => {
-                    lines.push(if rotation.abs() > 3 {
+                    lines.push(if rotation.abs() >= 2 {
                         lines::Line::PointToPoint(
-                            Point::new(*last_x, right.point.y),
-                            Point::new(*last_x, *last_y),
+                            Point::new(node.point.x, right.point.y),
+                            Point::new(bounds.width, right.point.y),
                         )
                     } else {
                         lines::Line::PointDirection(
-                            Point::new(*last_x, right.point.y),
+                            Point::new(node.point.x, right.point.y),
                             lines::Direction::Right,
                         )
                     });
-                    self.dfs_lines(index, lines, rotation - 1, last_x, &right.point.y);
+                    let bounds = Rectangle {
+                        x: node.point.x,
+                        ..bounds
+                    };
+                    self.dfs_lines(index, lines, rotation - 1, bounds);
                 }
             }
         }
@@ -182,7 +217,17 @@ impl KDTree {
         if let Some(root) = self.nodes.first() {
             let mut lines = Vec::new();
             lines.push(lines::Line::Vertical(root.point.x));
-            self.dfs_lines(0, &mut lines, 0, &root.point.x, &root.point.y);
+            self.dfs_lines(
+                0,
+                &mut lines,
+                0,
+                Rectangle {
+                    x: 0.,
+                    y: 0.,
+                    width: 1.,
+                    height: 1.,
+                },
+            );
             lines
         } else {
             Vec::new()

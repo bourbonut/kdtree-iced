@@ -10,6 +10,7 @@ pub(crate) enum Direction {
     Right,
 }
 
+#[allow(dead_code)]
 pub enum Line {
     Vertical(f32),
     Horizontal(f32),

@@ -20,7 +20,12 @@ impl Default for App {
             Point::new(0.4, 1. - 0.45),
             Point::new(0.8, 1. - 0.8),
             Point::new(0.6, 1. - 0.18),
+            Point::new(0.45, 1. - 0.45),
+            Point::new(0.15, 1. - 0.2),
         ];
+        // let points: Vec<Point> = (0..100)
+        //     .map(|_| Point::new(rand::random::<f32>(), rand::random::<f32>()))
+        //     .collect();
         let tree = kdtree::KDTree::new(&points);
         let lines = tree.lines();
         Self { lines }
