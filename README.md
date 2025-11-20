@@ -9,7 +9,7 @@ The implementation is not meant to be the most performant or generic implementat
 ## Compilation
 
 Make sure you have installed [`Rust`](https://rust-lang.org/tools/install/) on your machine:
-```
+```bash
 cargo run --release
 ```
 
@@ -26,4 +26,18 @@ cargo run --release
 
 ```bash
 RUSTDOCFLAGS="--html-in-header docs/katex-header.html" cargo doc --no-deps --open
+```
+
+## Benchmarks
+
+Compilation
+```bash
+RUSTFLAGS="-A dead_code" cargo run --release --bin benchmark
+```
+
+Results on my machine
+```
+Insertion: 0.88125µs +/- 47203.754833857µs
+Nearest neighbor: 0.767µs +/- 33.53671122814515µs
+Nearest neighbor: 7.347µs +/- 1781.2738674892323µs
 ```

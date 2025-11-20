@@ -1,4 +1,4 @@
-use crate::Message;
+use crate::app::Message;
 use iced::{Color, Point, Rectangle, Renderer, Theme, mouse, widget::canvas};
 
 /// Stroke width of lines
@@ -56,7 +56,7 @@ impl Geometry {
 /// Empty structure used by `Geometry` and required by
 /// [`canvas::Program`](https://docs.rs/iced/latest/iced/widget/canvas/trait.Program.html) trait
 #[derive(Default)]
-pub(crate) struct State {}
+pub struct State {}
 
 /// Scale an normalized point to the window coordinates. The coordinates of the point must be
 /// between $0$ and $1$.

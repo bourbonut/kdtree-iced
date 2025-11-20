@@ -2,11 +2,14 @@
 name = "kdtree-iced"
 version = "0.1.0"
 edition = "2024"
+default-run = "kdtree-iced"
+
+[[bin]]
+name = "benchmark"
+path = "src/benchmark.rs"
 
 [dependencies]
 iced = { version = "0.13.1", features = ["canvas"] }
-
-[dev-dependencies]
 rand = "0.9.2"
 
 [package.metadata.docs.rs]
