@@ -20,7 +20,7 @@ impl Default for App {
             Point::new(0.6, 1. - 0.18),
         ];
         Self {
-            tree: kdtree::KDTree::new(&points),
+            tree: kdtree::KDTree::from_points(&points),
             nearest_neighbor: None,
             target: None,
         }

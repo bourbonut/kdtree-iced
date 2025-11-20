@@ -49,46 +49,10 @@ pub struct KDTree {
 
 impl KDTree {
     #[allow(dead_code)]
-    pub fn new(points: &[Point]) -> Self {
+    pub fn from_points(points: &[Point]) -> Self {
         let mut tree = KDTree::default();
-        if let Some((root_point, points)) = points.split_first() {
-            tree.nodes.push(Node {
-                point: *root_point,
-                left: None,
-                right: None,
-                split: Split::X,
-            });
-            for point in points {
-                let node_index = tree.find_node(point, 0);
-                let next_index = tree.nodes.len();
-
-                let node = &mut tree.nodes[node_index];
-
-                match node.split {
-                    Split::X => {
-                        if point.x <= node.point.x {
-                            node.left = Some(next_index)
-                        } else {
-                            node.right = Some(next_index)
-                        }
-                    }
-                    Split::Y => {
-                        if point.y <= node.point.y {
-                            node.left = Some(next_index)
-                        } else {
-                            node.right = Some(next_index)
-                        }
-                    }
-                };
-
-                let node = &tree.nodes[node_index];
-                tree.nodes.push(Node {
-                    point: *point,
-                    left: None,
-                    right: None,
-                    split: node.split.opposite(),
-                })
-            }
+        for point in points {
+            tree.add_point(*point);
         }
         tree
     }
@@ -107,21 +71,10 @@ impl KDTree {
 
             let node = &mut self.nodes[node_index];
 
-            match node.split {
-                Split::X => {
-                    if point.x <= node.point.x {
-                        node.left = Some(next_index)
-                    } else {
-                        node.right = Some(next_index)
-                    }
-                }
-                Split::Y => {
-                    if point.y <= node.point.y {
-                        node.left = Some(next_index)
-                    } else {
-                        node.right = Some(next_index)
-                    }
-                }
+            if node.direction(&point) {
+                node.left = Some(next_index)
+            } else {
+                node.right = Some(next_index)
             };
 
             let node = &self.nodes[node_index];
@@ -143,21 +96,10 @@ impl KDTree {
 
     fn single_search(&self, point: &Point, node_index: usize) -> Option<usize> {
         let node = &self.nodes[node_index];
-        match node.split {
-            Split::X => {
-                if point.x <= node.point.x {
-                    node.left
-                } else {
-                    node.right
-                }
-            }
-            Split::Y => {
-                if point.y <= node.point.y {
-                    node.left
-                } else {
-                    node.right
-                }
-            }
+        if node.direction(point) {
+            node.left
+        } else {
+            node.right
         }
     }
 
