@@ -3,11 +3,16 @@ use iced::{Element, Length, Point, Theme, widget::canvas};
 mod geometry;
 mod kdtree;
 
+/// Minimum distance between two points to be considered the same.
 static MIN_DISTANCE: f32 = 0.005;
 
+/// The main application structure
 struct App {
+    /// `KDTree` tree
     tree: kdtree::KDTree,
+    /// Current nearest neighbor point from tree's points
     nearest_neighbor: Option<Point>,
+    /// Target point
     target: Option<Point>,
 }
 
@@ -29,14 +34,19 @@ impl Default for App {
     }
 }
 
+/// Message variants sent by mouse events
 #[derive(Debug)]
 enum Message {
+    /// Message for adding a point into the tree
     AddPoint(Point),
+    /// Message for adding a target point and finding the nearest neighbor point into the tree
     FindNeighbor(Point),
+    /// Message for removing a point into the tree
     DeletePoint(Point),
 }
 
 impl App {
+    /// Updates the application state given the specified message.
     fn update(&mut self, message: Message) {
         match message {
             Message::AddPoint(point) => {
@@ -64,6 +74,7 @@ impl App {
         }
     }
 
+    /// Returns the widget displayed on the screen
     fn view(&self) -> Element<'_, Message> {
         canvas::Canvas::new(geometry::Geometry::new(
             self.tree.points(),

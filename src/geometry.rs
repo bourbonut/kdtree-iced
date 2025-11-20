@@ -1,7 +1,9 @@
 use crate::Message;
 use iced::{Color, Point, Rectangle, Renderer, Theme, mouse, widget::canvas};
 
+/// Stroke width of lines
 pub static LINE_STROKE_WIDTH: f32 = 2.;
+/// Circle radius of points
 pub static CIRCLE_RADIUS: f32 = 5.;
 
 #[allow(dead_code)]
@@ -22,14 +24,20 @@ pub enum Line {
     PointToPoint(Point, Point),
 }
 
+/// Canvas program to draw points and lines.
 pub struct Geometry {
+    /// Target point filled in green
     target: Option<Point>,
+    /// Target point filled in red
     neighbor: Option<Point>,
+    /// Points of the `KDTree`
     points: Vec<Point>,
+    /// Lines of the `KDTree`
     lines: Vec<Line>,
 }
 
 impl Geometry {
+    /// Creates a `Geometry`.
     pub fn new(
         points: Vec<Point>,
         lines: Vec<Line>,
@@ -45,9 +53,13 @@ impl Geometry {
     }
 }
 
+/// Empty structure used by `Geometry` and required by
+/// [`canvas::Program`](https://docs.rs/iced/latest/iced/widget/canvas/trait.Program.html) trait
 #[derive(Default)]
 pub(crate) struct State {}
 
+/// Scale an normalized point to the window coordinates. The coordinates of the point must be
+/// between $0$ and $1$.
 #[inline]
 fn scale(point: &Point, bounds: &Rectangle) -> Point {
     Point::new(
@@ -56,6 +68,8 @@ fn scale(point: &Point, bounds: &Rectangle) -> Point {
     )
 }
 
+/// Scale a screen point into a normalized point. The coordinates of the point belong the screen
+/// size.
 #[inline]
 fn invert(point: &Point, bounds: &Rectangle) -> Point {
     Point::new(
@@ -67,6 +81,7 @@ fn invert(point: &Point, bounds: &Rectangle) -> Point {
 impl canvas::Program<Message> for Geometry {
     type State = State;
 
+    /// Draws lines and points the `Geometry` structure.
     fn draw(
         &self,
         _state: &Self::State,
@@ -138,6 +153,11 @@ impl canvas::Program<Message> for Geometry {
         vec![frame.into_geometry()]
     }
 
+    /// Captures mouse event and sends a message of the cursor position.
+    /// - left button for adding a point into the `KDTree`
+    /// - right button for adding a target point and finding the nearest neighbor point into the
+    ///   `KDtree`
+    /// - middle button for removing a point into the `KDTree`
     fn update(
         &self,
         _state: &mut Self::State,

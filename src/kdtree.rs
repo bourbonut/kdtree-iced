@@ -4,6 +4,7 @@ use std::collections::{HashMap, VecDeque};
 use crate::geometry;
 use iced::{Point, Rectangle};
 
+/// Split direction of points
 #[derive(Debug)]
 enum Split {
     X,
@@ -11,6 +12,7 @@ enum Split {
 }
 
 impl Split {
+    /// Returns the opposite direction of the split
     fn opposite(&self) -> Self {
         match self {
             Split::Y => Split::X,
@@ -19,11 +21,16 @@ impl Split {
     }
 }
 
+/// A node structure used by `KDTree`
 #[derive(Debug)]
 struct Node {
+    /// Point of the node
     point: Point,
+    /// Left child node of the node
     left: Option<usize>,
+    /// Right child node of the node
     right: Option<usize>,
+    /// Split direction
     split: Split,
 }
 
@@ -58,15 +65,20 @@ impl Node {
     }
 }
 
+/// KDTree structure with [`iced::Point`](https://docs.rs/iced/latest/iced/struct.Point.html) in
+/// `Node`
 #[derive(Default, Debug)]
 pub struct KDTree {
+    /// Free indices when a node is removed
     free_indices: VecDeque<usize>,
+    /// Node collection
     nodes: HashMap<usize, Node>,
+    /// Root index (not necessary `0`)
     root_index: usize,
 }
 
 impl KDTree {
-    #[allow(dead_code)]
+    /// Builds a `KDTree` from points
     pub fn from_points(points: &[Point]) -> Self {
         let mut tree = KDTree::default();
         for point in points {
@@ -75,6 +87,7 @@ impl KDTree {
         tree
     }
 
+    /// Adds a point in $O(\log_2(n))$ where $n$ is the size of the tree.
     pub fn add_point(&mut self, point: Point) {
         if self.nodes.is_empty() {
             self.root_index = if let Some(index) = self.free_indices.pop_front() {
@@ -120,6 +133,9 @@ impl KDTree {
         }
     }
 
+    /// Removes a point in $O(m \cdot \log_2(m))$ where `m` is the number of recomputed points.
+    /// When removing a point, all nodes under right leaf and left leaf of the removed points are
+    /// recomputed.
     pub fn remove_point(&mut self, point: Point) {
         let (node_index, parent_index) = self.find_parent(point, self.root_index, self.root_index);
         if node_index != parent_index {
@@ -139,6 +155,8 @@ impl KDTree {
         }
     }
 
+    /// Returns the parent index and the node index related to the specified point. The point must
+    /// belong to the tree's points because `node.point` is compared with `point`.
     fn find_parent(&self, point: Point, node_index: usize, parent_index: usize) -> (usize, usize) {
         if let Some(node) = self.nodes.get(&node_index) {
             if node.point == point {
@@ -154,6 +172,7 @@ impl KDTree {
         }
     }
 
+    /// Removes all nodes starting from `node_index` and store them into `points`.
     fn pop_nodes(&mut self, node_index: usize, points: &mut Vec<Point>) {
         if let Some(node) = self.nodes.remove(&node_index) {
             points.push(node.point);
@@ -167,6 +186,8 @@ impl KDTree {
         }
     }
 
+    /// Finds the depthest node of the tree given the specified `point`. Note that `node_index`
+    /// should be `self.root_index`.
     fn find_node(&self, point: &Point, node_index: usize) -> usize {
         match self.single_search(point, node_index) {
             Some(index) => self.find_node(point, index),
@@ -174,6 +195,7 @@ impl KDTree {
         }
     }
 
+    /// Returns the next node to traverse given a specified `point` and the current `node_index`.
     fn single_search(&self, point: &Point, node_index: usize) -> Option<usize> {
         let node = &self.nodes[&node_index];
         if node.direction(point) {
@@ -183,6 +205,7 @@ impl KDTree {
         }
     }
 
+    /// Finds the nearest neighbor of the specified `point`.
     pub fn nearest_neighbor(&self, point: &Point) -> Option<Point> {
         if self.nodes.is_empty() {
             None
@@ -191,6 +214,7 @@ impl KDTree {
         }
     }
 
+    /// Searchs the nearest neighbor recursively
     fn nearest_neighbor_search(&self, point: &Point, node_index: usize) -> Point {
         let node = &self.nodes[&node_index];
         let (primary, secondary) = if node.direction(point) {
@@ -226,6 +250,7 @@ impl KDTree {
         }
     }
 
+    /// Store lines into `lines` by traversing the tree using a Depth First Search approach
     fn dfs_lines(&self, node_index: usize, lines: &mut Vec<geometry::Line>, bounds: Rectangle) {
         let node = &self.nodes[&node_index];
         if let Some(index) = node.left {
@@ -284,6 +309,7 @@ impl KDTree {
         }
     }
 
+    /// Returns the lines drew by `Geometry`
     pub fn lines(&self) -> Vec<geometry::Line> {
         if let Some(root) = self.nodes.get(&self.root_index) {
             let mut lines = Vec::new();
@@ -304,6 +330,7 @@ impl KDTree {
         }
     }
 
+    /// Returns the points of the tree
     pub fn points(&self) -> Vec<Point> {
         self.nodes.values().map(|node| node.point).collect()
     }
