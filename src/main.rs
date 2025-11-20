@@ -78,18 +78,6 @@ impl App {
 }
 
 fn main() -> iced::Result {
-    // let points = vec![
-    //     Point::new(0.5, 0.6),
-    //     Point::new(0.1, 0.3),
-    //     Point::new(0.2, 0.15),
-    //     Point::new(0.4, 0.45),
-    //     Point::new(0.8, 0.8),
-    //     Point::new(0.6, 0.18),
-    // ];
-    // dbg!(&points);
-    // let tree = kdtree::KDTree::new(&points);
-    // dbg!(tree);
-
     iced::application("Iced Visualization - KDTree", App::update, App::view)
         .theme(|_| Theme::Light)
         .antialiasing(true)

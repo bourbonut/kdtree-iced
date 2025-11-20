@@ -38,7 +38,7 @@ impl Node {
     /// where:
     /// - $T$ is the target point (`point`)
     /// - $P$ is the current best neighbor, $d(T, P)$ is the euclidian distance between $T$ and $P$
-    /// (`radius`)
+    ///   (`radius`)
     /// - $N$ is the node point (`self.point`)
     /// - $\overrightarrow{\text{dir}}$ is the split direction (i.e. $\vec x$ or $\vec y$)
     fn is_in_hypersphere(&self, point: &Point, radius: f32) -> bool {
@@ -306,5 +306,48 @@ impl KDTree {
 
     pub fn points(&self) -> Vec<Point> {
         self.nodes.values().map(|node| node.point).collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::random;
+
+    fn random_point() -> Point {
+        Point::new(random::<f32>(), random::<f32>())
+    }
+
+    #[test]
+    fn test_nearest_point() {
+        for _ in 0..100 {
+            let points: Vec<Point> = (0..1_000).map(|_| random_point()).collect();
+            let target = random_point();
+            let tree = KDTree::from_points(&points);
+            let actual_neighbor = tree.nearest_neighbor(&target).unwrap();
+            let expected_neighbor = points
+                .iter()
+                .min_by(|a, b| {
+                    a.distance(target)
+                        .partial_cmp(&b.distance(target))
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .unwrap();
+            assert_eq!(actual_neighbor, *expected_neighbor);
+        }
+    }
+
+    #[test]
+    fn test_deletion() {
+        for _ in 0..100 {
+            let points: Vec<Point> = (0..1_000).map(|_| random_point()).collect();
+            let target = rand::random_range(0..1_000);
+            let mut tree = KDTree::from_points(&points);
+            let point = points[target];
+            tree.remove_point(point);
+            let points = tree.points();
+            assert_eq!(tree.nodes.len(), 999);
+            assert!(!points.contains(&point));
+        }
     }
 }
