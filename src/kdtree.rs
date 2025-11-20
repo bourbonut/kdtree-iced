@@ -1,4 +1,5 @@
 use core::f32;
+use std::collections::{HashMap, VecDeque};
 
 use crate::geometry;
 use iced::{Point, Rectangle};
@@ -59,7 +60,9 @@ impl Node {
 
 #[derive(Default, Debug)]
 pub struct KDTree {
-    nodes: Vec<Node>,
+    free_indices: VecDeque<usize>,
+    nodes: HashMap<usize, Node>,
+    root_index: usize,
 }
 
 impl KDTree {
@@ -74,31 +77,93 @@ impl KDTree {
 
     pub fn add_point(&mut self, point: Point) {
         if self.nodes.is_empty() {
-            self.nodes.push(Node {
-                point,
-                left: None,
-                right: None,
-                split: Split::X,
-            });
-        } else {
-            let node_index = self.find_node(&point, 0);
-            let next_index = self.nodes.len();
-
-            let node = &mut self.nodes[node_index];
-
-            if node.direction(&point) {
-                node.left = Some(next_index)
+            self.root_index = if let Some(index) = self.free_indices.pop_front() {
+                index
             } else {
-                node.right = Some(next_index)
+                self.nodes.len()
+            };
+            self.nodes.insert(
+                self.root_index,
+                Node {
+                    point,
+                    left: None,
+                    right: None,
+                    split: Split::X,
+                },
+            );
+        } else {
+            let node_index = self.find_node(&point, self.root_index);
+            let next_index = if let Some(index) = self.free_indices.pop_front() {
+                index
+            } else {
+                self.nodes.len()
             };
 
-            let node = &self.nodes[node_index];
-            self.nodes.push(Node {
-                point,
-                left: None,
-                right: None,
-                split: node.split.opposite(),
+            self.nodes.entry(node_index).and_modify(|node| {
+                if node.direction(&point) {
+                    node.left = Some(next_index)
+                } else {
+                    node.right = Some(next_index)
+                };
             });
+
+            let node = &self.nodes[&node_index];
+            self.nodes.insert(
+                next_index,
+                Node {
+                    point,
+                    left: None,
+                    right: None,
+                    split: node.split.opposite(),
+                },
+            );
+        }
+    }
+
+    pub fn remove_point(&mut self, point: Point) {
+        let (node_index, parent_index) = self.find_parent(point, self.root_index, self.root_index);
+        if node_index != parent_index {
+            self.nodes.entry(parent_index).and_modify(|node| {
+                if Some(node_index) == node.left {
+                    node.left = None;
+                }
+                if Some(node_index) == node.right {
+                    node.right = None;
+                }
+            });
+        }
+        let mut points = Vec::new();
+        self.pop_nodes(node_index, &mut points);
+        for point in points[1..].iter() {
+            self.add_point(*point);
+        }
+    }
+
+    fn find_parent(&self, point: Point, node_index: usize, parent_index: usize) -> (usize, usize) {
+        if let Some(node) = self.nodes.get(&node_index) {
+            if node.point == point {
+                (node_index, parent_index)
+            } else {
+                match self.single_search(&point, node_index) {
+                    Some(index) => self.find_parent(point, index, node_index),
+                    None => (node_index, parent_index),
+                }
+            }
+        } else {
+            (node_index, parent_index)
+        }
+    }
+
+    fn pop_nodes(&mut self, node_index: usize, points: &mut Vec<Point>) {
+        if let Some(node) = self.nodes.remove(&node_index) {
+            points.push(node.point);
+            self.free_indices.push_back(node_index);
+            if let Some(left_index) = node.left {
+                self.pop_nodes(left_index, points);
+            }
+            if let Some(right_index) = node.right {
+                self.pop_nodes(right_index, points);
+            }
         }
     }
 
@@ -110,7 +175,7 @@ impl KDTree {
     }
 
     fn single_search(&self, point: &Point, node_index: usize) -> Option<usize> {
-        let node = &self.nodes[node_index];
+        let node = &self.nodes[&node_index];
         if node.direction(point) {
             node.left
         } else {
@@ -122,12 +187,12 @@ impl KDTree {
         if self.nodes.is_empty() {
             None
         } else {
-            Some(self.nearest_neighbor_search(point, 0))
+            Some(self.nearest_neighbor_search(point, self.root_index))
         }
     }
 
     fn nearest_neighbor_search(&self, point: &Point, node_index: usize) -> Point {
-        let node = &self.nodes[node_index];
+        let node = &self.nodes[&node_index];
         let (primary, secondary) = if node.direction(point) {
             (node.left, node.right)
         } else {
@@ -162,9 +227,9 @@ impl KDTree {
     }
 
     fn dfs_lines(&self, node_index: usize, lines: &mut Vec<geometry::Line>, bounds: Rectangle) {
-        let node = &self.nodes[node_index];
+        let node = &self.nodes[&node_index];
         if let Some(index) = node.left {
-            let left = &self.nodes[index];
+            let left = &self.nodes[&index];
             match left.split {
                 Split::X => {
                     lines.push(geometry::Line::PointToPoint(
@@ -191,7 +256,7 @@ impl KDTree {
             }
         }
         if let Some(index) = node.right {
-            let right = &self.nodes[index];
+            let right = &self.nodes[&index];
             match right.split {
                 Split::X => {
                     lines.push(geometry::Line::PointToPoint(
@@ -220,11 +285,11 @@ impl KDTree {
     }
 
     pub fn lines(&self) -> Vec<geometry::Line> {
-        if let Some(root) = self.nodes.first() {
+        if let Some(root) = self.nodes.get(&self.root_index) {
             let mut lines = Vec::new();
             lines.push(geometry::Line::Vertical(root.point.x));
             self.dfs_lines(
-                0,
+                self.root_index,
                 &mut lines,
                 Rectangle {
                     x: 0.,
@@ -240,6 +305,6 @@ impl KDTree {
     }
 
     pub fn points(&self) -> Vec<Point> {
-        self.nodes.iter().map(|node| node.point).collect()
+        self.nodes.values().map(|node| node.point).collect()
     }
 }

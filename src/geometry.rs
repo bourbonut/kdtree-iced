@@ -159,6 +159,12 @@ impl canvas::Program<Message> for Geometry {
                         Some(Message::FindNeighbor(invert(&position, &bounds))),
                     );
                 }
+                canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Middle)) => {
+                    return (
+                        canvas::event::Status::Captured,
+                        Some(Message::DeletePoint(invert(&position, &bounds))),
+                    );
+                }
                 _ => (),
             }
         }

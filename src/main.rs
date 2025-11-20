@@ -3,6 +3,8 @@ use iced::{Element, Length, Point, Theme, widget::canvas};
 mod geometry;
 mod kdtree;
 
+static MIN_DISTANCE: f32 = 0.005;
+
 struct App {
     tree: kdtree::KDTree,
     nearest_neighbor: Option<Point>,
@@ -31,6 +33,7 @@ impl Default for App {
 enum Message {
     AddPoint(Point),
     FindNeighbor(Point),
+    DeletePoint(Point),
 }
 
 impl App {
@@ -46,6 +49,17 @@ impl App {
             Message::FindNeighbor(point) => {
                 self.nearest_neighbor = self.tree.nearest_neighbor(&point);
                 self.target = Some(point);
+            }
+            Message::DeletePoint(point) => {
+                if let Some(point_to_remove) = self.tree.nearest_neighbor(&point)
+                    && point_to_remove.distance(point) <= MIN_DISTANCE
+                {
+                    self.tree.remove_point(point_to_remove);
+                    match self.target {
+                        Some(point) => self.nearest_neighbor = self.tree.nearest_neighbor(&point),
+                        None => self.nearest_neighbor = None,
+                    }
+                }
             }
         }
     }
