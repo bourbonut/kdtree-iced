@@ -27,6 +27,19 @@ struct Node {
 }
 
 impl Node {
+    /// Checks if distance (`radius` of the hypersphere) is greater than the absolute distance
+    /// between the point and the current node point:
+    ///
+    /// $$
+    /// d(T, P) > |\overrightarrow{NT} \cdot \overrightarrow{\text{dir}}|
+    /// $$
+    ///
+    /// where:
+    /// - $T$ is the target point (`point`)
+    /// - $P$ is the current best neighbor, $d(T, P)$ is the euclidian distance between $T$ and $P$
+    /// (`radius`)
+    /// - $N$ is the node point (`self.point`)
+    /// - $\overrightarrow{\text{dir}}$ is the split direction (i.e. $\vec x$ or $\vec y$)
     fn is_in_hypersphere(&self, point: &Point, radius: f32) -> bool {
         match self.split {
             Split::X => radius > (point.x - self.point.x).abs(),
@@ -34,6 +47,8 @@ impl Node {
         }
     }
 
+    /// Returns the direction of the next node child given the specified point where `true`
+    /// represents "left" and `false` represents "right".
     fn direction(&self, point: &Point) -> bool {
         match self.split {
             Split::X => point.x <= self.point.x,
