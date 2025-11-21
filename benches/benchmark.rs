@@ -6,6 +6,13 @@ fn random_point() -> Point {
     Point::new(rand::random::<f32>(), rand::random::<f32>())
 }
 
+pub fn creating_100_000_points(c: &mut Criterion) {
+    c.bench_function("creating_100_000_points", |b| {
+        let points: Vec<Point> = (0..100_000).map(|_| random_point()).collect();
+        b.iter(|| KDTree::from_points(&points))
+    });
+}
+
 pub fn insertion(c: &mut Criterion) {
     let mut tree = KDTree::default();
     for _ in 0..100_000 {
@@ -35,5 +42,11 @@ pub fn deletion(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, insertion, nearest_neighbor, deletion);
+criterion_group!(
+    benches,
+    creating_100_000_points,
+    insertion,
+    nearest_neighbor,
+    deletion
+);
 criterion_main!(benches);
