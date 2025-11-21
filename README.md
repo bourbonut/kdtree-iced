@@ -37,20 +37,24 @@ cargo bench
 
 Results on my machine
 ```
-insertion               time:   [4.4053 µs 4.6924 µs 4.9294 µs]
-                        change: [-36.542% -26.243% -13.119%] (p = 0.00 < 0.05)
+creating_100_000_points time:   [62.834 ms 63.162 ms 63.513 ms]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+
+insertion               time:   [4.4622 µs 4.7567 µs 5.0017 µs]
+                        change: [−99.995% −99.995% −99.994%] (p = 0.00 < 0.05)
                         Performance has improved.
 
-nearest_neighbor        time:   [752.53 ns 822.34 ns 897.22 ns]
-                        change: [+2.9062% +14.195% +26.819%] (p = 0.01 < 0.05)
-                        Performance has regressed.
-Found 4 outliers among 100 measurements (4.00%)
-  4 (4.00%) high mild
+nearest_neighbor        time:   [851.06 ns 968.52 ns 1.1128 µs]
+                        change: [−10.863% +1.9634% +14.803%] (p = 0.77 > 0.05)
+                        No change in performance detected.
+Found 5 outliers among 100 measurements (5.00%)
+  3 (3.00%) high mild
+  2 (2.00%) high severe
 
-deletion                time:   [537.33 ns 565.39 ns 593.42 ns]
-                        change: [+26.004% +33.665% +41.376%] (p = 0.00 < 0.05)
-                        Performance has regressed.
-Found 1 outliers among 100 measurements (1.00%)
-  1 (1.00%) low mild
-
+deletion                time:   [576.27 ns 606.35 ns 641.18 ns]
+                        change: [−0.9044% +4.1187% +9.8164%] (p = 0.12 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
 ```
