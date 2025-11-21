@@ -32,12 +32,25 @@ RUSTDOCFLAGS="--html-in-header docs/katex-header.html" cargo doc --no-deps --ope
 
 Compilation
 ```bash
-RUSTFLAGS="-A dead_code" cargo run --release --bin benchmark
+cargo bench
 ```
 
 Results on my machine
 ```
-Insertion: 0.88125µs +/- 47203.754833857µs
-Nearest neighbor: 0.767µs +/- 33.53671122814515µs
-Nearest neighbor: 7.347µs +/- 1781.2738674892323µs
+insertion               time:   [4.4053 µs 4.6924 µs 4.9294 µs]
+                        change: [-36.542% -26.243% -13.119%] (p = 0.00 < 0.05)
+                        Performance has improved.
+
+nearest_neighbor        time:   [752.53 ns 822.34 ns 897.22 ns]
+                        change: [+2.9062% +14.195% +26.819%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Found 4 outliers among 100 measurements (4.00%)
+  4 (4.00%) high mild
+
+deletion                time:   [537.33 ns 565.39 ns 593.42 ns]
+                        change: [+26.004% +33.665% +41.376%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) low mild
+
 ```
