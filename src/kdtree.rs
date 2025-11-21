@@ -137,38 +137,46 @@ impl KDTree {
     /// When removing a point, all nodes under right leaf and left leaf of the removed points are
     /// recomputed.
     pub fn remove_point(&mut self, point: Point) {
-        let (node_index, parent_index) = self.find_parent(point, self.root_index, self.root_index);
-        if node_index != parent_index {
-            self.nodes.entry(parent_index).and_modify(|node| {
-                if Some(node_index) == node.left {
-                    node.left = None;
-                }
-                if Some(node_index) == node.right {
-                    node.right = None;
-                }
-            });
-        }
-        let mut points = Vec::new();
-        self.pop_nodes(node_index, &mut points);
-        for point in points[1..].iter() {
-            self.add_point(*point);
+        if let Some((node_index, parent_index)) =
+            self.find_parent(point, self.root_index, self.root_index)
+        {
+            if node_index != parent_index {
+                self.nodes.entry(parent_index).and_modify(|node| {
+                    if Some(node_index) == node.left {
+                        node.left = None;
+                    }
+                    if Some(node_index) == node.right {
+                        node.right = None;
+                    }
+                });
+            }
+            let mut points = Vec::new();
+            self.pop_nodes(node_index, &mut points);
+            for point in points[1..].iter() {
+                self.add_point(*point);
+            }
         }
     }
 
     /// Returns the parent index and the node index related to the specified point. The point must
     /// belong to the tree's points because `node.point` is compared with `point`.
-    fn find_parent(&self, point: Point, node_index: usize, parent_index: usize) -> (usize, usize) {
+    fn find_parent(
+        &self,
+        point: Point,
+        node_index: usize,
+        parent_index: usize,
+    ) -> Option<(usize, usize)> {
         if let Some(node) = self.nodes.get(&node_index) {
             if node.point == point {
-                (node_index, parent_index)
+                Some((node_index, parent_index))
             } else {
                 match self.single_search(&point, node_index) {
                     Some(index) => self.find_parent(point, index, node_index),
-                    None => (node_index, parent_index),
+                    None => None,
                 }
             }
         } else {
-            (node_index, parent_index)
+            None
         }
     }
 
@@ -365,7 +373,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deletion() {
+    fn test_deletion_with_match() {
         for _ in 0..100 {
             let points: Vec<Point> = (0..1_000).map(|_| random_point()).collect();
             let target = rand::random_range(0..1_000);
@@ -375,6 +383,19 @@ mod tests {
             let points = tree.points();
             assert_eq!(tree.nodes.len(), 999);
             assert!(!points.contains(&point));
+        }
+    }
+
+    #[test]
+    fn test_deletion_no_match() {
+        for _ in 0..100 {
+            let points: Vec<Point> = (0..1_000).map(|_| random_point()).collect();
+            let mut tree = KDTree::from_points(&points);
+            let point = random_point();
+            tree.remove_point(point);
+            let points = tree.points();
+            assert!(!points.contains(&point));
+            assert_eq!(tree.nodes.len(), 1000);
         }
     }
 }

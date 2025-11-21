@@ -1,16 +1,18 @@
 [package]
-name = "kdtree-iced"
+name = "kdtree_iced"
 version = "0.1.0"
 edition = "2024"
-default-run = "kdtree-iced"
-
-[[bin]]
-name = "benchmark"
-path = "src/benchmark.rs"
 
 [dependencies]
 iced = { version = "0.13.1", features = ["canvas"] }
+
+[dev-dependencies]
+criterion = "0.3"
 rand = "0.9.2"
+
+[[bench]]
+name = "benchmark"
+harness = false
 
 [package.metadata.docs.rs]
 rustdoc-args = [ "--html-in-header", "docs/katex-header.html" ]

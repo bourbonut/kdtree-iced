@@ -3,7 +3,7 @@ use crate::kdtree;
 use iced::{Element, Length, Point, widget::canvas};
 
 /// Minimum distance between two points to be considered the same.
-static MIN_DISTANCE: f32 = 0.005;
+const MIN_DISTANCE: f32 = 0.005;
 
 /// The main application structure
 pub struct App {

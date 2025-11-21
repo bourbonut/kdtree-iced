@@ -2,25 +2,13 @@ use crate::app::Message;
 use iced::{Color, Point, Rectangle, Renderer, Theme, mouse, widget::canvas};
 
 /// Stroke width of lines
-pub static LINE_STROKE_WIDTH: f32 = 2.;
+const LINE_STROKE_WIDTH: f32 = 2.;
 /// Circle radius of points
-pub static CIRCLE_RADIUS: f32 = 5.;
+const CIRCLE_RADIUS: f32 = 5.;
 
-#[allow(dead_code)]
-#[derive(Debug)]
-pub(crate) enum Direction {
-    Top,
-    Bottom,
-    Left,
-    Right,
-}
-
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum Line {
     Vertical(f32),
-    Horizontal(f32),
-    PointDirection(Point, Direction),
     PointToPoint(Point, Point),
 }
 
@@ -94,32 +82,12 @@ impl canvas::Program<Message> for Geometry {
 
         for line in self.lines.iter() {
             let line = match line {
-                Line::Horizontal(y) => {
-                    let y = bounds.y + bounds.height * y;
-                    canvas::Path::line(
-                        Point::new(bounds.x, y),
-                        Point::new(bounds.x + bounds.width, y),
-                    )
-                }
                 Line::Vertical(x) => {
                     let x = bounds.x + bounds.width * x;
                     canvas::Path::line(
                         Point::new(x, bounds.y),
                         Point::new(x, bounds.y + bounds.height),
                     )
-                }
-                Line::PointDirection(point, direction) => {
-                    let point = scale(point, &bounds);
-                    match direction {
-                        Direction::Top => canvas::Path::line(point, Point::new(point.x, bounds.y)),
-                        Direction::Bottom => {
-                            canvas::Path::line(point, Point::new(point.x, bounds.y + bounds.height))
-                        }
-                        Direction::Left => canvas::Path::line(point, Point::new(bounds.x, point.y)),
-                        Direction::Right => {
-                            canvas::Path::line(point, Point::new(bounds.x + bounds.width, point.y))
-                        }
-                    }
                 }
                 Line::PointToPoint(from, to) => {
                     canvas::Path::line(scale(from, &bounds), scale(to, &bounds))
